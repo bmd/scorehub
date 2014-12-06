@@ -1,1 +1,1 @@
-web: gunicorn free_scores:app
+web: gunicorn scorehub:app

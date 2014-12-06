@@ -5,10 +5,15 @@ This simple flask app parses the ESPN BottomLine score feed and returns JSON rig
 ## Endpoints
 
 #### Current
-```/ping```
+```
+/ping
+```
+
 If the app is working, ```/ping``` returns a 200 response. Nothing more, nothing less.
 
-```/ncaaf```
+```
+/ncaaf
+```
 Returns a feed of NCAA DIV-I football scores.
 
 #### Possible?

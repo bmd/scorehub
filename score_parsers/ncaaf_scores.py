@@ -1,6 +1,6 @@
 import re
-
 import requests
+
 
 from score_parsers.common import group
 

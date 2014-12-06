@@ -1,6 +1,8 @@
-import requests
 import re
-from common import group
+
+import requests
+
+from score_parsers.common import group
 
 
 def get_ncaaf_scores():
@@ -12,7 +14,7 @@ def get_ncaaf_scores():
             gs[t].append(parse_in_progres_or_finished_game(game[0], game[1]))
         else:
             gs[t].append(parse_future_game(game[0], game[1]))
-    return gs['complete'], gs['inprogress'], gs['unplayed']
+    return gs
 
 
 def process_raw_game_data(fetch_url):

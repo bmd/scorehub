@@ -113,3 +113,109 @@ class NcaabParser(BaseParser):
     def __init__(self):
         self.data_url = 'http://sports.espn.go.com/ncb/bottomline/scores'
         self.box_score_url = 'http://sports.espn.go.com/ncb/boxscore?gameId={game_id}'
+
+    def get_scores_json(self):
+        data = self._get_web_data(self.data_url)
+        return self._parse_ncaab_scores(data)
+
+    def _get_web_data(self, fetch_url):
+        # request raw data from ESPN url
+        r = requests.get(fetch_url)
+
+        # do some heavy-duty cleanup
+        encoded = [e.replace('%26', '&') for e in r.text.replace('%20', ' ').split('&') if
+                   re.match('^ncb_s_(left|right|url)[0-9]+=.*', e)]
+
+        # group the strings into games
+        return [list(e) for e in self.group(2, encoded)]
+
+    def _parse_ncaab_scores(self, raw):
+        games = []
+        for game in raw:
+            print 'Determining Game Type:'
+            game_type = self._determine_game_type(game[0])
+            print game_type
+            if game_type in ['complete', 'inprogress']:
+                print 'Parsing ' + game_type + ' game'
+                games.append(self._parse_in_progres_or_finished_game(game[0], game[1]))
+            else:
+                print 'Parsing future game'
+                games.append(self._parse_future_game(game[0], game[1]))
+        return games
+
+    def _determine_game_type(self, gamestring):
+        # set up regex to determine type
+        complete = re.compile('.*\(FINAL.*\) ?$')
+        to_play = re.compile('.*\(\d{1,2}:\d{1,2} (AM|PM) [A-Z]{2}\)$')
+        # make type determination
+        if to_play.match(gamestring):
+            return 'unplayed'
+        elif complete.match(gamestring):
+            return 'complete'
+        else:
+            return 'inprogress'
+
+    def _parse_in_progres_or_finished_game(self, gamestring, gamelink):
+        print gamestring
+        game_record = re.compile(
+            '(?:.*=)(\^)?(\(\d{1,2}\))?([^0-9]+)(\d{1,2})(?: {3})(\^)?(\(\d{1,2}\))?([^0-9]+)(\d{1,2}).*(\(.*\))')
+        # game_link = re.compile('^(?:.*=)(.*)')
+        m = game_record.match(gamestring)
+        print m
+        g = m.groups()
+        m2 = re.match('^(?:.*=)(.*)', gamelink)
+
+        game = {
+            'away': {
+                'winner': True if g[0] else False,
+                'ranked': int(g[1].replace('(', '').replace(')', '')) if g[1] else None,
+                'team': g[2].strip(),
+                'score': int(g[3].strip())
+            },
+            'home': {
+                'winner': True if g[4] else False,
+                'ranked': int(g[5].replace('(', '').replace(')', '')) if g[5] else None,
+                'team': g[6].strip(),
+                'score': int(g[7].strip())
+            },
+            'status': g[8].strip('(').strip(')'),
+            'gameId': m2.groups()[0],
+            '_links': {
+                'score': {
+                    'href': self.box_score_url.format(game_id=m2.groups()[0])
+                }
+            }
+        }
+        return game
+
+    def _parse_future_game(self, gamestring, gamelink):
+        game_record = re.compile('(?:.*=)(\((\d{1,2})\))?(.+)(?=at)at (\((\d{1,2})\))?(.+)(?=\()\((.*)\)')
+        game_link = re.compile('^(?:.*=)(.*)')
+        m = game_record.match(gamestring)
+        g = m.groups()
+        m2 = game_link.match(gamelink)
+
+        game = {
+            'home': {
+                'winner': False,
+                'score': None,
+                'team': g[2].strip(),
+                'rank': int(g[1].replace('(', '').replace(')', '')) if g[1] else None
+            },
+            'away': {
+                'winner': False,
+                'score': None,
+                'team': g[5].strip(),
+                'rank': int(g[4].replace('(', '').replace(')', '')) if g[4] else None
+            },
+
+            'status': g[6],
+            'gameId': m2.groups()[0],
+            '_links': {
+                'score': {
+                    'href': self.box_score_url.format(game_id=m2.groups()[0])
+                }
+            }
+        }
+
+        return game

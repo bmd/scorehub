@@ -32,8 +32,20 @@ def ncaaf():
         return jsonify({
             'status': 500,
             'message': 'Something weng wrong'
-        })
+        }), 500
 
+
+@app.route('/ncaab')
+def ncaab():
+    logger.debug('\tRequest for NCAA Basketball scores received')
+    try:
+        return jsonify(get_scores_for('ncaab')), 200
+    except Exception as e:
+        logger.error(e)
+        return jsonify({
+            'status': 500,
+            'message': 'Something weng wrong'
+        }), 500
 
 if __name__ == '__main__':
     app.run(debug=True)
